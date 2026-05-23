@@ -152,22 +152,14 @@ async def refresh_token(data: RefreshTokenRequest) -> TokenResponse:
         user=_user_to_response(user),
     )
 
-
-# ── FORGOT PASSWORD ───────────────────────────────────────────────────────────
+#── FORGOT PASSWORD ─────────────────────────────────────────────────────────────
 
 async def forgot_password(data: ForgotPasswordRequest) -> MessageResponse:
     user = await User.find_one(User.email == data.email)
 
-    # IMPORTANT: Always return the same message whether or not the email exists.
-    # This prevents attackers from knowing which emails are registered.
-    generic_msg = MessageResponse(
-        message="If this email is registered, you'll receive a reset link shortly."
-    )
-
     if not user:
-        return generic_msg  # Pretend success — don't reveal email existence
+        return MessageResponse(message="If this email is registered, you'll receive a reset link shortly.")
 
-    # Generate a secure random token (not JWT — simpler for reset flow)
     reset_token = secrets.token_urlsafe(32)
     expires = datetime.utcnow() + timedelta(minutes=settings.RESET_TOKEN_EXPIRE_MINUTES)
 
@@ -176,16 +168,8 @@ async def forgot_password(data: ForgotPasswordRequest) -> MessageResponse:
         User.reset_token_expires: expires,
     }))
 
-    try:
-        await send_password_reset_email(user.email, user.name, reset_token)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to send reset email. Please try again.",
-        )
-
-    return generic_msg
-
+    # FOR HACKATHON: skip email, return token directly for testing
+    return MessageResponse(message=f"Password reset token (for testing): {reset_token}")
 
 # ── RESET PASSWORD ────────────────────────────────────────────────────────────
 
