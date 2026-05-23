@@ -10,6 +10,11 @@ from bson import ObjectId
 from fastapi import Depends, FastAPI, File, HTTPException, Header, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from dotenv import load_dotenv
+from pathlib import Path
+
+# Load environment from backend/.env (kept out of VCS)
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from app.db.database import (
     collection,

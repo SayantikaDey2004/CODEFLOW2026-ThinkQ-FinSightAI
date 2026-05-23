@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { Toast } from "../lib/toast";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, BarChart3, Brain, CheckCircle, CloudUpload, File, RefreshCw, Target, Upload, Wallet } from "lucide-react";
 import { saveUploadSnapshot } from "../lib/transactionStore";
@@ -34,6 +35,7 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
 
   const uploadedCount = useMemo(() => files.filter((item) => item.status === "done").length, [files]);
 
@@ -68,6 +70,7 @@ export default function UploadPage() {
       return;
     }
 
+
     setUploading(true);
     setError("");
     setDone(false);
@@ -82,7 +85,8 @@ export default function UploadPage() {
       saveUploadSnapshot(analysis.files, analysis.transactions);
 
       setDone(true);
-      window.setTimeout(() => navigate("/transactions"), 700);
+      setToast("Upload successful! Now you can analyze with AI.");
+      // window.setTimeout(() => navigate("/transactions"), 700); // Comment out auto-redirect
     } catch (error) {
       setError(error instanceof Error ? error.message : "Upload failed. Please try again.");
       setFiles((previous) => previous.map((item) => ({ ...item, progress: 0, status: "idle" })));
@@ -215,7 +219,26 @@ export default function UploadPage() {
             </div>
 
             {!done && (
-              <button type="button" onClick={runAnalysis} disabled={uploading} style={{ marginTop: 18, width: "100%", padding: "14px 18px", borderRadius: 16, border: "none", background: uploading ? "rgba(56,189,248,0.45)" : "linear-gradient(135deg, #38bdf8, #6366f1)", color: "white", fontWeight: 800, cursor: uploading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+              <button
+                type="button"
+                onClick={runAnalysis}
+                disabled={uploading || files.length === 0 || files.some((item) => item.status !== "done")}
+                style={{
+                  marginTop: 18,
+                  width: "100%",
+                  padding: "14px 18px",
+                  borderRadius: 16,
+                  border: "none",
+                  background: uploading || files.length === 0 || files.some((item) => item.status !== "done") ? "rgba(56,189,248,0.45)" : "linear-gradient(135deg, #38bdf8, #6366f1)",
+                  color: "white",
+                  fontWeight: 800,
+                  cursor: uploading || files.length === 0 || files.some((item) => item.status !== "done") ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                }}
+              >
                 {uploading ? "Processing..." : <><Brain size={16} /> Analyse with AI <ArrowRight size={14} /></>}
               </button>
             )}
@@ -266,6 +289,7 @@ export default function UploadPage() {
         )}
 
       </main>
-    </div>
+    {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+  </div>
   );
 }
