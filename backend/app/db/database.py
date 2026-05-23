@@ -25,7 +25,7 @@ def get_data(email: str):
     if data:
         return data
     else:
-        return {"data": "not exists"}
+        return None
 
 def delete_data(email: str):
     result = collection.delete_one({"email": email})

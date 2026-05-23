@@ -28,6 +28,7 @@ outh = OAuth2PasswordBearer(tokenUrl="/token")
 def home(request: Request):
     return {"message": "success"}
 
+
 @app.post("/token")
 def new_token(data: dict):
     try:
@@ -36,31 +37,102 @@ def new_token(data: dict):
         return {"error": str(e)}
     else:
         return {"access_token": token, "token_type": "bearer"}
+@app.get("/api/v1/dashboard/summary")
+async def get_dashboard_summary(authorization: str | None = Header(default=None)):
+    user_key = _statement_user_key(authorization)
+    stored = get_latest_statement_analysis(user_key)
+    if not stored:
+        stored = get_latest_statement_analysis("anonymous")
 
-@app.post("/signup")
+    if not stored:
+        # Return empty dashboard instead of 404
+        return {
+            "healthScore": 0, "totalIncome": 0, "totalExpense": 0,
+            "currentBalance": 0, "savings": 0, "incomeChangePct": 0,
+            "expenseChangePct": 0, "savingsPct": 0, "transactionCount": 0,
+            "monthlyData": [], "categories": [], "recurring": [],
+            "unusual": [], "aiInsights": [], "txList": []
+        }
+
+    summary = stored.get("summary", {})
+    cat_colors = ["#22c55e","#0ea5e9","#f97316","#8b5cf6","#ec4899","#f59e0b","#14b8a6"]
+    categories = [
+        {"name": cat, "amount": amt,
+         "pct": round(amt / max(summary.get("total_expense",1),1) * 100),
+         "color": cat_colors[i % len(cat_colors)]}
+        for i, (cat, amt) in enumerate(summary.get("category_breakdown", {}).items())
+    ]
+    recurring = [
+        {"name": r["name"], "date": "monthly", "amount": r["avg_amount"],
+         "status": "active", "icon": "🔄", "color": "#0ea5e9"}
+        for r in stored.get("recurring", [])
+    ]
+    unusual = [
+        {"name": u["merchant"], "reason": f"Flagged: ₹{abs(u['amount']):,.0f}",
+         "amount": abs(u["amount"]), "icon": "⚠️"}
+        for u in stored.get("unusual", [])
+    ]
+    ai = stored.get("ai_summary", {})
+    ai_insights = [
+        {"icon": "🧠", "title": "Overview", "text": ai.get("overview","")},
+        *[{"icon": "📌", "title": "Observation", "text": obs} for obs in ai.get("observations",[])],
+        *[{"icon": "💡", "title": "Recommendation", "text": rec} for rec in ai.get("recommendations",[])]
+    ]
+    txList = [
+        {"date": t["date"], "name": t["merchant"], "bank": "Statement",
+         "cat": t["category"], "catColor": "#0ea5e9", "icon": "💳",
+         "iconBg": "#1e3a5f", "amount": t["amount"],
+         "status": "flagged" if t.get("unusual") else "completed"}
+        for t in stored.get("transactions", [])[:20]
+    ]
+    net = summary.get("net_savings", 0)
+    return {
+        "healthScore": ai.get("health_score", 0),
+        "totalIncome": summary.get("total_income", 0),
+        "totalExpense": summary.get("total_expense", 0),
+        "currentBalance": net,
+        "savings": net,
+        "incomeChangePct": 0,
+        "expenseChangePct": 0,
+        "savingsPct": summary.get("savings_rate", 0),
+        "transactionCount": summary.get("transaction_count", 0),
+        "monthlyData": stored.get("monthly_trend", []),
+        "categories": categories,
+        "recurring": recurring,
+        "unusual": unusual,
+        "aiInsights": ai_insights,
+        "txList": txList,
+    }
+@app.post("/api/v1/auth/signup")
 async def new_user(data: SignupRequest):
     hash_pw = create_hashed_password(data.password)
     data.password = hash_pw.decode("UTF-8")
     try:
-        d = insert_data(data.dict())
+        d = insert_data(data.model_dump())
     except Exception as e:
         return {"Error": f"Signup failed: {str(e)}"}
     else:
         token = create_token({"email": data.email})
         return {"new_user": d, "token": token}
-
-@app.post("/login")
-async def user_login(data:LoginRequest):
-    k=get_data(data.email)
-    if not k:
-        return {"login":False}
-    else:
-        if(check_password(data.password,k.get("password"))):
-            token=create_token(data.dict())
-            return {"login":True,"token":token,"name":k.get("name"),"email":k.get("email")}
-        else:
-            return {"login":False,"error":"password didnt match"}
-
+@app.post("/api/v1/auth/login")
+async def user_login(data: LoginRequest):
+    k = get_data(data.email)
+    if not k or not check_password(data.password, k.get("password")):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    token = create_token({"email": k["email"], "name": k["name"]})
+    return {
+        "access_token": token,
+        "refresh_token": token,   # no refresh logic yet, reuse same token
+        "token_type": "bearer",
+        "user": {
+            "id": str(k.get("_id", "")),
+            "name": k["name"],
+            "email": k["email"],
+            "is_active": True,
+            "is_verified": True,
+            "created_at": ""
+        }
+    }
 @app.post("/update_password")
 def update_pass(data: LoginRequest,token=Depends(outh)):
     try:
@@ -79,7 +151,7 @@ def delete_user(email:str,token=Depends(outh)):
     else:
         return {"delete": d}
 
-@app.post("/logout")
+@app.post("/api/v1/auth/logout")
 def user_logout(request: Request, token=Depends(outh)):
     token=""
     # In stateless JWT, logout is client-side (just discard token).
