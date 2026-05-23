@@ -1,19 +1,63 @@
-import { ApiError, getStoredAccessToken, type StatementAnalysisResponse } from "./authApi";
+import { ApiError, getStoredAccessToken } from "./authApi";
+import type { TransactionRecord, TransactionSummary } from "../lib/transactionStore";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8000/api/v1";
 
-export async function uploadStatement(file: File): Promise<StatementAnalysisResponse> {
-  const formData = new FormData();
-  formData.append("file", file);
+export interface UploadedStatementFile {
+  name: string;
+  size: number;
+  type: string;
+}
 
+export interface StatementRecurringItem {
+  name: string;
+  count: number;
+  avg_amount: number;
+  category: string;
+}
+
+export interface StatementAiSummary {
+  overview: string;
+  observations: string[];
+  recommendations: string[];
+  health_score: number;
+  health_score_reason: string;
+}
+
+export interface MonthlyTrendItem {
+  month: string;
+  income: number;
+  expense: number;
+}
+
+export interface BackendStatementAnalysisResponse {
+  uploaded_at: string;
+  files: UploadedStatementFile[];
+  summary: TransactionSummary & {
+    total_income: number;
+    total_expense: number;
+    net_savings: number;
+    savings_rate: number;
+    top_spending_category: string;
+    transaction_count: number;
+    category_breakdown: Record<string, number>;
+  };
+  transactions: TransactionRecord[];
+  recurring: StatementRecurringItem[];
+  unusual: TransactionRecord[];
+  ai_summary: StatementAiSummary;
+  monthly_trend: MonthlyTrendItem[];
+}
+
+async function requestBackend<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getStoredAccessToken();
-
-  const response = await fetch(`${API_BASE_URL}/statements/upload`, {
-    method: "POST",
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
     headers: {
+      ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init.headers || {}),
     },
-    body: formData,
   });
 
   const text = await response.text();
@@ -30,12 +74,41 @@ export async function uploadStatement(file: File): Promise<StatementAnalysisResp
   if (!response.ok) {
     const detail =
       typeof data === "object" && data !== null && "detail" in data
-        ? String((data as { detail?: unknown }).detail ?? "Upload failed")
+        ? String((data as { detail?: unknown }).detail ?? "Request failed")
         : typeof data === "string" && data.trim()
           ? data
-          : "Upload failed";
+          : "Request failed";
     throw new ApiError(detail, response.status);
   }
 
-  return data as StatementAnalysisResponse;
+  return data as T;
+}
+
+export async function uploadStatementFiles(files: File[]): Promise<BackendStatementAnalysisResponse> {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append("files", file);
+  }
+
+  return requestBackend<BackendStatementAnalysisResponse>("/statements/upload", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function uploadStatement(file: File): Promise<BackendStatementAnalysisResponse> {
+  return uploadStatementFiles([file]);
+}
+
+export async function fetchLatestStatementAnalysis(): Promise<BackendStatementAnalysisResponse | null> {
+  try {
+    return await requestBackend<BackendStatementAnalysisResponse>("/statements/latest", {
+      method: "GET",
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }

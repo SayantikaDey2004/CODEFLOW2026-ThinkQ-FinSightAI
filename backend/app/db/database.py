@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 from modules.hashed_password import create_hashed_password
 
@@ -7,6 +8,7 @@ load_dotenv()
 client = MongoClient(os.getenv("mongo_url"))
 db = client[os.getenv("data_base")]
 collection = db["user"]
+statement_collection = db["statement_analyses"]
 
 
 def insert_data(user: dict):
@@ -41,3 +43,24 @@ def update_password(email: str, new_password: str):
         return {"data": "password updated"}
     else:
         return {"data": "not exists"}
+
+
+def save_statement_analysis(user_key: str, analysis: dict):
+    payload = {
+        **analysis,
+        "user_key": user_key,
+        "updated_at": datetime.utcnow(),
+    }
+    statement_collection.update_one(
+        {"user_key": user_key},
+        {"$set": payload},
+        upsert=True,
+    )
+    return payload
+
+
+def get_latest_statement_analysis(user_key: str):
+    return statement_collection.find_one(
+        {"user_key": user_key},
+        sort=[("updated_at", -1)],
+    )
