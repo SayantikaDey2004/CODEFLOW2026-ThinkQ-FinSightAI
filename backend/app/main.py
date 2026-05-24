@@ -37,6 +37,19 @@ from modules.send_email import send_email
 app = FastAPI(title="FinSightAI API")
 
 
+def _csv_env(name: str, default: str) -> list[str]:
+    return [item.strip().rstrip("/") for item in os.getenv(name, default).split(",") if item.strip()]
+
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173").strip().rstrip("/")
+ALLOWED_ORIGINS = _csv_env(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000",
+)
+if FRONTEND_URL:
+    ALLOWED_ORIGINS.append(FRONTEND_URL)
+
+
 
 @app.get("/api/v1/admin/gemini_key")
 async def admin_gemini_key():
@@ -50,12 +63,7 @@ async def admin_gemini_key():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -189,7 +197,7 @@ async def forgot_password(data: ForgotPasswordRequest):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No account found for that email.")
 
     reset_token = _create_token({"email": data.email, "purpose": "reset_password"}, 30)
-    reset_url = f"http://localhost:5173/reset-password?token={reset_token}"
+    reset_url = f"{FRONTEND_URL}/reset-password?token={reset_token}"
 
     collection.update_one(
         {"email": data.email},
