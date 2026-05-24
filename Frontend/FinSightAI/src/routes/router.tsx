@@ -6,6 +6,7 @@ import ForgotPasswordPage from "../pages/forgotPassword.page";
 import ResetPasswordPage from "../pages/resetPassword.page";
 import LoginPage from "../pages/logIn.page";
 import DashboardPage from "../pages/dashboard.page.tsx";
+import AiSummaryPage from "../pages/aiSummary.page";
 import LandingPage from "../pages/landing.page";
 import UserProfile from "../pages/profile.page";
 import UploadPage from "../pages/dataUpload.page";
@@ -21,6 +22,7 @@ const Router: React.FC = () => {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/ai-summary" element={<AiSummaryPage />} />
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/landing" element={<LandingPage />} />

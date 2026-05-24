@@ -13,6 +13,15 @@ import {
 } from "../services/authApi";
 import { getDashboardSummary, type DashboardSummaryResponse } from "../services/dashboardApi";
 
+const SIDEBAR_LINKS = [
+  { label: "Dashboard", icon: "🏠", kind: "scroll", target: "dashboard-top" },
+  { label: "Transactions", icon: "💳", kind: "route", target: "/transactions" },
+  { label: "Recurring Payments", icon: "🔁", kind: "scroll", target: "recurring-payments" },
+  { label: "Unusual Spending", icon: "⚠️", kind: "scroll", target: "unusual-spending" },
+  { label: "AI Insights", icon: "🤖", kind: "route", target: "/ai-summary" },
+  { label: "Upload Statement", icon: "📂", kind: "route", target: "/upload" },
+] as const;
+
 interface SectionProps {
   title: string;
   subtitle?: string;
@@ -135,6 +144,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -202,6 +212,20 @@ export default function DashboardPage() {
     }
   }
 
+  function handleSidebarAction(kind: "scroll" | "route", target: string) {
+    if (kind === "route") {
+      setSidebarOpen(false);
+      navigate(target);
+      return;
+    }
+
+    const element = document.getElementById(target);
+    if (element) {
+      setSidebarOpen(false);
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
   const displayName = user?.name || user?.email || "FinSight user";
   const avatar = useMemo(() => initials(displayName), [displayName]);
   const topSummary = summary;
@@ -228,9 +252,31 @@ export default function DashboardPage() {
         }}
       >
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-          <div>
-            <div style={{ fontSize: 12, letterSpacing: "0.24em", textTransform: "uppercase", color: "#7dd3fc", fontWeight: 700 }}>FinSightAI</div>
-            <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>Financial dashboard</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open navigation menu"
+              style={{
+                width: 46,
+                height: 46,
+                borderRadius: 16,
+                border: "1px solid rgba(148,163,184,0.16)",
+                background: "rgba(15,23,42,0.85)",
+                color: "#e2e8f0",
+                fontSize: 22,
+                fontWeight: 900,
+                cursor: "pointer",
+                display: "grid",
+                placeItems: "center",
+              }}
+            >
+              ⋮
+            </button>
+            <div>
+              <div style={{ fontSize: 12, letterSpacing: "0.24em", textTransform: "uppercase", color: "#7dd3fc", fontWeight: 700 }}>FinSightAI</div>
+              <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>Financial dashboard</div>
+            </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ textAlign: "right" }}>
@@ -272,12 +318,102 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 20px 56px" }}>
-        {error && (
-          <div style={{ marginBottom: 18, padding: "14px 16px", borderRadius: 16, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#fecaca" }}>
-            {error}
-          </div>
-        )}
+      {sidebarOpen && (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setSidebarOpen(false)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" || event.key === "Enter" || event.key === " ") {
+              setSidebarOpen(false);
+            }
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(2,6,23,0.62)",
+            zIndex: 30,
+          }}
+        >
+          <aside
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              position: "absolute",
+              top: 12,
+              left: 12,
+              width: 320,
+              maxWidth: "calc(100vw - 24px)",
+              height: "calc(100vh - 24px)",
+              background: "rgba(8, 13, 28, 0.98)",
+              border: "1px solid rgba(148,163,184,0.14)",
+              borderRadius: 24,
+              padding: 18,
+              boxShadow: "0 30px 80px rgba(0,0,0,0.45)",
+              overflowY: "auto",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase", color: "#7dd3fc", fontWeight: 800 }}>Navigation</div>
+                <div style={{ marginTop: 4, color: "#94a3b8", fontSize: 13 }}>Quick links</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(false)}
+                aria-label="Close navigation menu"
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 12,
+                  border: "1px solid rgba(148,163,184,0.16)",
+                  background: "rgba(15,23,42,0.85)",
+                  color: "#e2e8f0",
+                  fontSize: 20,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ display: "grid", gap: 10 }}>
+              {SIDEBAR_LINKS.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => handleSidebarAction(item.kind, item.target)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    width: "100%",
+                    padding: "12px 14px",
+                    borderRadius: 16,
+                    border: "1px solid rgba(148,163,184,0.12)",
+                    background: item.label === "Dashboard" ? "rgba(14,165,233,0.12)" : "rgba(255,255,255,0.03)",
+                    color: item.label === "Dashboard" ? "#7dd3fc" : "#e2e8f0",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    fontWeight: 700,
+                  }}
+                >
+                  <span style={{ fontSize: 18 }}>{item.icon}</span>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </aside>
+        </div>
+      )}
+
+      <main style={{ maxWidth: 1240, margin: "0 auto", padding: "24px 20px 56px" }}>
+        <div style={{ minWidth: 0 }}>
+          <div id="dashboard-top" />
+          {error && (
+            <div style={{ marginBottom: 18, padding: "14px 16px", borderRadius: 16, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#fecaca" }}>
+              {error}
+            </div>
+          )}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 16, marginBottom: 20 }}>
           <MetricCard label="Health score" value={loading ? "…" : `${topSummary.healthScore}/850`} hint={healthStatus} accent="linear-gradient(90deg, #0ea5e9, #22c55e)" />
@@ -381,7 +517,8 @@ export default function DashboardPage() {
             </div>
           </Section>
 
-          <Section title="Recurring payments" subtitle="Subscriptions and scheduled bills">
+          <div id="recurring-payments">
+            <Section title="Recurring payments" subtitle="Subscriptions and scheduled bills">
             <div style={{ display: "grid", gap: 10 }}>
               {topSummary.recurring.length > 0 ? topSummary.recurring.map((item) => (
                 <div key={item.name} style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", padding: 12, borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(148,163,184,0.1)" }}>
@@ -396,11 +533,12 @@ export default function DashboardPage() {
                 </div>
               )) : <div style={{ color: "#94a3b8" }}>No recurring payments detected yet.</div>}
             </div>
-          </Section>
+            </Section>
+          </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-          <Section title="Unusual transactions" subtitle="Flagged by the backend AI layer">
+          <Section title="Unusual transactions" subtitle="Flagged by the backend AI layer" action={<div id="unusual-spending"><Badge color="#ef4444">Attention</Badge></div>}>
             <div style={{ display: "grid", gap: 10 }}>
               {topSummary.unusual.length > 0 ? topSummary.unusual.map((item) => (
                 <div key={item.name} style={{ padding: 12, borderRadius: 14, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}>
@@ -416,20 +554,24 @@ export default function DashboardPage() {
             </div>
           </Section>
 
-          <Section title="AI summary" subtitle="Insights generated from your statement">
+          <div id="ai-insights">
+            <Section title="AI financial summary" subtitle="Open the full analysis on a dedicated page" action={<button type="button" onClick={() => navigate("/ai-summary")} style={{ padding: "10px 14px", borderRadius: 14, border: "1px solid rgba(148,163,184,0.14)", background: "rgba(15,23,42,0.85)", color: "#e2e8f0", fontWeight: 700, cursor: "pointer" }}>Open page</button>}>
             <div style={{ display: "grid", gap: 12 }}>
-              {topSummary.aiInsights.length > 0 ? topSummary.aiInsights.map((item) => (
-                <div key={item.title} style={{ padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(148,163,184,0.1)" }}>
-                  <div style={{ fontSize: 20 }}>{item.icon}</div>
-                  <div style={{ marginTop: 8, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.14em", color: "#7dd3fc", fontWeight: 800 }}>{item.title}</div>
-                  <div style={{ marginTop: 8, color: "#e2e8f0", lineHeight: 1.6 }}>{item.text}</div>
+              <div style={{ padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(148,163,184,0.1)" }}>
+                <div style={{ fontSize: 20 }}>🧠</div>
+                <div style={{ marginTop: 8, color: "#e2e8f0", lineHeight: 1.6 }}>
+                  The full AI financial summary now lives on its own page so you can review insights, recommendations, and statement analysis without crowding the dashboard.
                 </div>
-              )) : <div style={{ color: "#94a3b8" }}>Upload a statement to generate insights.</div>}
+                <button type="button" onClick={() => navigate("/ai-summary")} style={{ marginTop: 12, padding: "10px 14px", borderRadius: 14, border: "1px solid rgba(14,165,233,0.2)", background: "rgba(14,165,233,0.12)", color: "#7dd3fc", fontWeight: 700, cursor: "pointer" }}>
+                  View AI summary
+                </button>
+              </div>
             </div>
-          </Section>
+            </Section>
+          </div>
         </div>
 
-        <Section title="Transaction history" subtitle="Latest transactions returned by the backend">
+        <Section title="Transaction history" subtitle="Latest transactions returned by the backend" action={<div id="transactions"><Badge color="#0ea5e9">Transactions</Badge></div>}>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -466,6 +608,7 @@ export default function DashboardPage() {
             Statement upload response received: {analysis.summary?.top_spending_category || "analysis loaded"}
           </div>
         )}
+        </div>
       </main>
     </div>
   );
