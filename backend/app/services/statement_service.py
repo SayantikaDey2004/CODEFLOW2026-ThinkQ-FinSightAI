@@ -1232,11 +1232,11 @@ async def analyze_statement(
 # import urllib.request
 # from collections import defaultdict
 # from datetime import datetime
-from typing import Any
+# from typing import Any
 
-from fastapi import UploadFile
-from app.services import parser_service
-from app.services.unusual_transaction_service import compute_unusual_flag
+# from fastapi import UploadFile
+# from app.services import parser_service
+# from app.services.unusual_transaction_service import compute_unusual_flag
 
 # ── Category keyword map (Indian bank statement context) ─────────────────────
 #     "transport": "Transport",
