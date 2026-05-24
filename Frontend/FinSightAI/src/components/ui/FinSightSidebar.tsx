@@ -8,6 +8,7 @@ const MENU_ITEMS = [
   { label: "Unusual Spending", icon: "⚠️", path: "/unusual-spending" },
   { label: "AI Insights", icon: "🤖", path: "/ai-summary" },
   { label: "Upload Statement", icon: "📂", path: "/upload" },
+  { label: "Profile", icon: "👤", path: "/profile" },
 ] as const;
 
 export default function FinSightSidebar() {

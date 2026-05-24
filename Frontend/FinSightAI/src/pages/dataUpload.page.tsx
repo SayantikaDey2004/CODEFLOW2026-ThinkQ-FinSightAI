@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, BarChart3, Brain, CheckCircle, CloudUpload, File, RefreshCw, Target, Upload, Wallet } from "lucide-react";
 import { saveUploadSnapshot } from "../lib/transactionStore";
 import { uploadStatementFiles } from "../services/statementApi";
+import FinSightSidebar from "../components/ui/FinSightSidebar";
 
 interface UploadItem {
   file: File;
@@ -110,6 +111,7 @@ export default function UploadPage() {
         body { margin: 0; }
         input::placeholder { color: #64748b; }
       `}</style>
+      <FinSightSidebar />
 
       <header style={{ position: "sticky", top: 0, zIndex: 20, backdropFilter: "blur(16px)", background: "rgba(4,8,20,0.72)", borderBottom: "1px solid rgba(148,163,184,0.08)" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>

@@ -20,6 +20,7 @@ import {
   loadUploadSnapshot,
   type TransactionRecord,
 } from "../lib/transactionStore";
+import FinSightSidebar from "../components/ui/FinSightSidebar";
 
 const CATEGORY_META: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
   Food: { icon: CreditCard, color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
@@ -209,6 +210,7 @@ export default function TransactionsPage() {
   return (
     <div style={{ minHeight: "100vh", background: "radial-gradient(circle at top, rgba(14,165,233,0.18), transparent 30%), linear-gradient(180deg, #040814 0%, #070c18 38%, #050816 100%)", color: "#e2e8f0" }}>
       <style>{`* { box-sizing: border-box; } body { margin: 0; }`}</style>
+      <FinSightSidebar />
 
       <header style={{ position: "sticky", top: 0, zIndex: 20, backdropFilter: "blur(16px)", background: "rgba(4,8,20,0.72)", borderBottom: "1px solid rgba(148,163,184,0.08)" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>

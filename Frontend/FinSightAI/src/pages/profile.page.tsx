@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError, clearAuthSession, fetchCurrentUser, getStoredUser, logout as logoutRequest, setStoredUser, updateProfile, type AuthUser } from "../services/authApi";
+import FinSightSidebar from "../components/ui/FinSightSidebar";
 
 function Card({ children }: { children: ReactNode }) {
   return (
@@ -119,6 +120,7 @@ export default function UserProfile() {
   return (
     <div style={{ minHeight: "100vh", background: "radial-gradient(circle at top, rgba(14,165,233,0.16), transparent 32%), linear-gradient(180deg, #040814 0%, #070c18 38%, #050816 100%)", color: "#e2e8f0" }}>
       <style>{`* { box-sizing: border-box; } body { margin: 0; } input::placeholder { color: #5b6477; }`}</style>
+      <FinSightSidebar />
 
       <header style={{ position: "sticky", top: 0, zIndex: 20, backdropFilter: "blur(16px)", background: "rgba(4,8,20,0.72)", borderBottom: "1px solid rgba(148,163,184,0.08)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
@@ -188,14 +190,7 @@ export default function UserProfile() {
                 <Label>Account Status</Label>
                 <div style={{ display: "grid", gap: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", color: "#cbd5e1" }}><span>Status</span><span style={{ color: user?.is_active ? "#86efac" : "#fca5a5" }}>{user?.is_active ? "Active" : "Inactive"}</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "#cbd5e1" }}><span>Verification</span><span style={{ color: user?.is_verified ? "#86efac" : "#fbbf24" }}>{user?.is_verified ? "Verified" : "Pending"}</span></div>
                 </div>
-              </div>
-            </Card>
-            <Card>
-              <div style={{ padding: 24 }}>
-                <Label>Session</Label>
-                <p style={{ marginTop: 0, color: "#94a3b8", lineHeight: 1.6 }}>Your account session is managed by the backend. Logging out clears the stored tokens and returns you to login.</p>
               </div>
             </Card>
           </div>

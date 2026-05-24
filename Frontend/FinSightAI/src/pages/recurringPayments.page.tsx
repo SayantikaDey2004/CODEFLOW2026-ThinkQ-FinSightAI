@@ -10,6 +10,7 @@ import {
   type AuthUser,
 } from "../services/authApi";
 import { getDashboardSummary, type DashboardSummaryResponse } from "../services/dashboardApi";
+import FinSightSidebar from "../components/ui/FinSightSidebar";
 
 interface SectionProps {
   title: string;
@@ -157,6 +158,7 @@ export default function RecurringPaymentsPage() {
       }}
     >
       <style>{`* { box-sizing: border-box; } body { margin: 0; }`}</style>
+      <FinSightSidebar />
 
       <header
         style={{
@@ -173,45 +175,7 @@ export default function RecurringPaymentsPage() {
             <div style={{ fontSize: 12, letterSpacing: "0.24em", textTransform: "uppercase", color: "#7dd3fc", fontWeight: 700 }}>FinSightAI</div>
             <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>Recurring payments</div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard")}
-              style={{
-                border: "1px solid rgba(148,163,184,0.16)",
-                borderRadius: 14,
-                padding: "10px 14px",
-                background: "rgba(15,23,42,0.85)",
-                color: "#e2e8f0",
-                cursor: "pointer",
-                fontWeight: 700,
-              }}
-            >
-              Back to dashboard
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/ai-summary")}
-              style={{
-                border: "1px solid rgba(14,165,233,0.2)",
-                borderRadius: 14,
-                padding: "10px 14px",
-                background: "rgba(14,165,233,0.12)",
-                color: "#7dd3fc",
-                cursor: "pointer",
-                fontWeight: 700,
-              }}
-            >
-              AI insights
-            </button>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#f8fafc" }}>{displayName}</div>
-              <div style={{ fontSize: 12, color: "#94a3b8" }}>{user?.email || "Signed in"}</div>
-            </div>
-            <div style={{ width: 42, height: 42, borderRadius: "50%", display: "grid", placeItems: "center", background: "linear-gradient(135deg, #0ea5e9, #8b5cf6)", color: "white", fontWeight: 800, boxShadow: "0 10px 24px rgba(14,165,233,0.25)" }}>
-              {avatar}
-            </div>
-          </div>
+          <div />
         </div>
       </header>
 
