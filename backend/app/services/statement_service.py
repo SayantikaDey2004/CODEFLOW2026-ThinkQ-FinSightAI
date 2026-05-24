@@ -799,6 +799,59 @@ def _build_ai_summary(
     }
 
 
+def generate_dashboard_ai_summary(
+    summary: dict[str, Any],
+    recurring: list[dict[str, Any]],
+    unusual: list[dict[str, Any]],
+    transactions: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Generate a dashboard-ready AI summary, using Gemini when available and a heuristic fallback otherwise."""
+    heuristic = _build_ai_summary(summary, recurring, unusual, transactions)
+
+    try:
+        api_key = _gemini_api_key()
+        if not api_key:
+            return heuristic
+
+        tx_sample = []
+        for tx in transactions[:40]:
+            tx_sample.append({
+                "date": tx.get("date"),
+                "merchant": tx.get("merchant"),
+                "category": tx.get("category"),
+                "amount": tx.get("amount"),
+                "type": tx.get("type"),
+            })
+
+        prompt = json.dumps({
+            "instructions": (
+                "You are a financial analyst. Use the user's transaction history to produce a concise dashboard summary. "
+                "Return ONLY JSON with keys: overview (string), observations (array of strings), recommendations (array of strings), "
+                "health_score (integer 0-100), health_score_reason (string). "
+                "Mention total spend, top spending category, recurring subscriptions like Netflix/Spotify/premium apps if present, "
+                "and unusual transactions."
+            ),
+            "summary": summary,
+            "recurring": recurring,
+            "unusual": unusual,
+            "transactions": tx_sample,
+        }, default=str)
+
+        model_output = _invoke_gemini_text(prompt)
+        if isinstance(model_output, dict) and model_output:
+            return {
+                "overview": str(model_output.get("overview") or heuristic["overview"]),
+                "observations": model_output.get("observations") if isinstance(model_output.get("observations"), list) else heuristic["observations"],
+                "recommendations": model_output.get("recommendations") if isinstance(model_output.get("recommendations"), list) else heuristic["recommendations"],
+                "health_score": int(model_output.get("health_score", heuristic["health_score"])),
+                "health_score_reason": str(model_output.get("health_score_reason") or heuristic["health_score_reason"]),
+            }
+    except Exception as error:
+        print(f"[statement_service] Gemini dashboard summary failed: {error}")
+
+    return heuristic
+
+
 # ── Gemini PDF/image extraction ───────────────────────────────────────────────
 
 GEMINI_PROMPT = """You are an expert Indian bank statement OCR parser.

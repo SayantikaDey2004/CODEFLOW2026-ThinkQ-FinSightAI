@@ -26,7 +26,9 @@ from app.db.database import (
     update_password,
 )
 from app.models.pydantic_models import ForgotPasswordRequest, LoginRequest, ResetPasswordRequest, SignupRequest
-from app.services.statement_service import analyze_statement_files
+from app.services.recurring_payment_service import detect_recurring_payments
+from app.services.statement_service import analyze_statement_files, generate_dashboard_ai_summary
+from app.services.unusual_transaction_service import compute_unusual_flag
 from app.routes.statement_routes import router as statement_router
 from modules.hashed_password import check_password, create_hashed_password
 
@@ -134,55 +136,7 @@ async def get_dashboard_summary(authorization: str | None = Header(default=None)
             "unusual": [], "aiInsights": [], "txList": []
         }
 
-    summary = stored.get("summary", {})
-    cat_colors = ["#22c55e","#0ea5e9","#f97316","#8b5cf6","#ec4899","#f59e0b","#14b8a6"]
-    categories = [
-        {"name": cat, "amount": amt,
-         "pct": round(amt / max(summary.get("total_expense",1),1) * 100),
-         "color": cat_colors[i % len(cat_colors)]}
-        for i, (cat, amt) in enumerate(summary.get("category_breakdown", {}).items())
-    ]
-    recurring = [
-        {"name": r["name"], "date": "monthly", "amount": r["avg_amount"],
-         "status": "active", "icon": "🔄", "color": "#0ea5e9"}
-        for r in stored.get("recurring", [])
-    ]
-    unusual = [
-        {"name": u["merchant"], "reason": f"Flagged: ₹{abs(u['amount']):,.0f}",
-         "amount": abs(u["amount"]), "icon": "⚠️"}
-        for u in stored.get("unusual", [])
-    ]
-    ai = stored.get("ai_summary", {})
-    ai_insights = [
-        {"icon": "🧠", "title": "Overview", "text": ai.get("overview","")},
-        *[{"icon": "📌", "title": "Observation", "text": obs} for obs in ai.get("observations",[])],
-        *[{"icon": "💡", "title": "Recommendation", "text": rec} for rec in ai.get("recommendations",[])]
-    ]
-    txList = [
-        {"date": t["date"], "name": t["merchant"], "bank": "Statement",
-         "cat": t["category"], "catColor": "#0ea5e9", "icon": "💳",
-         "iconBg": "#1e3a5f", "amount": t["amount"],
-         "status": "flagged" if t.get("unusual") else "completed"}
-        for t in stored.get("transactions", [])[:20]
-    ]
-    net = summary.get("net_savings", 0)
-    return {
-        "healthScore": ai.get("health_score", 0),
-        "totalIncome": summary.get("total_income", 0),
-        "totalExpense": summary.get("total_expense", 0),
-        "currentBalance": net,
-        "savings": net,
-        "incomeChangePct": 0,
-        "expenseChangePct": 0,
-        "savingsPct": summary.get("savings_rate", 0),
-        "transactionCount": summary.get("transaction_count", 0),
-        "monthlyData": stored.get("monthly_trend", []),
-        "categories": categories,
-        "recurring": recurring,
-        "unusual": unusual,
-        "aiInsights": ai_insights,
-        "txList": txList,
-    }
+    return _build_dashboard_payload(stored)
 @app.post("/api/v1/auth/signup")
 async def signup(data: SignupRequest):
     if _get_user_by_email(data.email):
@@ -304,57 +258,6 @@ async def logout():
     return {"message": "Logged out successfully.", "success": True}
 
 
-@app.get("/api/v1/dashboard/summary")
-async def dashboard_summary(credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme)):
-    email = _require_bearer(credentials)
-    user = _get_user_by_email(email)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    display_name = user.get("name", "FinSight user")
-    return {
-        "healthScore": 742,
-        "totalIncome": 185000,
-        "totalExpense": 132400,
-        "currentBalance": 52600,
-        "savings": 52600,
-        "incomeChangePct": 12,
-        "expenseChangePct": -4,
-        "savingsPct": 28,
-        "transactionCount": 42,
-        "monthlyData": [
-            {"month": "Jan", "income": 120000, "expense": 86000},
-            {"month": "Feb", "income": 128000, "expense": 91000},
-            {"month": "Mar", "income": 141000, "expense": 94000},
-            {"month": "Apr", "income": 156000, "expense": 100500},
-            {"month": "May", "income": 172000, "expense": 121000},
-            {"month": "Jun", "income": 185000, "expense": 132400},
-        ],
-        "categories": [
-            {"name": "Housing", "amount": 42000, "pct": 32, "color": "#38bdf8"},
-            {"name": "Food", "amount": 23000, "pct": 17, "color": "#22c55e"},
-            {"name": "Transport", "amount": 18000, "pct": 14, "color": "#f59e0b"},
-            {"name": "Lifestyle", "amount": 49500, "pct": 37, "color": "#a78bfa"},
-        ],
-        "recurring": [
-            {"name": "Rent", "date": "5 Jun", "amount": 26000, "status": "active", "icon": "🏠", "color": "#38bdf8"},
-            {"name": "Streaming", "date": "12 Jun", "amount": 1499, "status": "due", "icon": "🎬", "color": "#a78bfa"},
-        ],
-        "unusual": [
-            {"name": "Weekend transfer", "reason": "Marked unusual because it is 3x above your typical debit amount.", "amount": 24500, "icon": "⚠️"},
-        ],
-        "aiInsights": [
-            {"icon": "📈", "title": "Income growth", "text": f"Your income trend is up and {display_name} is keeping a healthy buffer each month."},
-            {"icon": "🧠", "title": "Spending pattern", "text": "Lifestyle spending is the largest discretionary bucket. A small cap here would raise savings quickly."},
-        ],
-        "txList": [
-            {"date": "2026-05-19", "name": "Salary Credit", "bank": "HDFC", "cat": "Income", "catColor": "#22c55e", "icon": "⬆️", "iconBg": "#22c55e", "amount": 125000, "status": "completed"},
-            {"date": "2026-05-18", "name": "Grocery Mart", "bank": "SBI", "cat": "Food", "catColor": "#f59e0b", "icon": "🛒", "iconBg": "#f59e0b", "amount": -8400, "status": "completed"},
-            {"date": "2026-05-17", "name": "Ride Share", "bank": "ICICI", "cat": "Transport", "catColor": "#38bdf8", "icon": "🚕", "iconBg": "#38bdf8", "amount": -1250, "status": "pending"},
-        ],
-    }
-
-
 def _statement_user_key(authorization: str | None) -> str:
     if not authorization:
         return "anonymous"
@@ -365,6 +268,139 @@ def _statement_user_key(authorization: str | None) -> str:
         return "anonymous"
 
     return str(decoded.get("email") or decoded.get("id") or decoded.get("sub") or "anonymous")
+
+
+def _build_dashboard_payload(stored: dict[str, Any]) -> dict[str, Any]:
+    transactions = stored.get("transactions", []) or []
+
+    total_income = round(sum(float(tx.get("amount") or 0.0) for tx in transactions if float(tx.get("amount") or 0.0) > 0), 2)
+    total_expense = round(sum(abs(float(tx.get("amount") or 0.0)) for tx in transactions if float(tx.get("amount") or 0.0) < 0), 2)
+    current_balance = round(total_income - total_expense, 2)
+
+    category_breakdown: dict[str, float] = {}
+    debit_amounts: list[float] = []
+    for tx in transactions:
+        amount = float(tx.get("amount") or 0.0)
+        if amount < 0:
+            category = str(tx.get("category") or "Other")
+            category_breakdown[category] = category_breakdown.get(category, 0.0) + abs(amount)
+            debit_amounts.append(abs(amount))
+
+    cat_colors = ["#22c55e", "#0ea5e9", "#f97316", "#8b5cf6", "#ec4899", "#f59e0b", "#14b8a6"]
+    sorted_categories = sorted(category_breakdown.items(), key=lambda item: item[1], reverse=True)
+    categories = [
+        {
+            "name": cat,
+            "amount": round(amount, 2),
+            "pct": round((amount / total_expense) * 100) if total_expense > 0 else 0,
+            "color": cat_colors[index % len(cat_colors)],
+        }
+        for index, (cat, amount) in enumerate(sorted_categories)
+    ]
+
+    recurring_raw = detect_recurring_payments(transactions)
+    recurring = [
+        {
+            "name": item["name"],
+            "date": item["date"],
+            "amount": item["amount"],
+            "status": item["status"],
+            "icon": item.get("icon", "🔄"),
+            "color": item.get("color", "#0ea5e9"),
+            "category": item.get("category", "Other"),
+            "count": item.get("count", 0),
+            "avg_amount": item.get("avg_amount", item["amount"]),
+            "cadence_months": item.get("cadence_months", 1),
+            "next_due_date": item.get("next_due_date"),
+        }
+        for item in recurring_raw
+    ]
+
+    unusual_tx = [tx for tx in transactions if bool(tx.get("unusual"))]
+    if not unusual_tx and debit_amounts:
+        median = sorted(debit_amounts)[len(debit_amounts) // 2]
+        total_debits = sum(debit_amounts)
+        for tx in transactions:
+            if compute_unusual_flag(tx, debit_median=median, debit_total=total_debits):
+                unusual_tx.append(tx)
+
+    unusual = [
+        {
+            "name": tx.get("merchant", "Unknown"),
+            "reason": tx.get("note") or tx.get("narration") or "Flagged by analysis.",
+            "amount": abs(float(tx.get("amount") or 0.0)),
+            "icon": "⚠️",
+        }
+        for tx in unusual_tx
+    ]
+
+    monthly: dict[str, dict[str, float]] = {}
+    for tx in transactions:
+        date_key = str(tx.get("date") or "")[:7]
+        if not date_key:
+            continue
+        monthly.setdefault(date_key, {"income": 0.0, "expense": 0.0})
+        amount = float(tx.get("amount") or 0.0)
+        if amount > 0:
+            monthly[date_key]["income"] += amount
+        else:
+            monthly[date_key]["expense"] += abs(amount)
+
+    monthly_data = []
+    for key in sorted(monthly.keys()):
+        try:
+            month_label = dt.datetime.strptime(key, "%Y-%m").strftime("%b %Y")
+        except ValueError:
+            month_label = key
+        monthly_data.append({"month": month_label, "income": round(monthly[key]["income"], 2), "expense": round(monthly[key]["expense"], 2)})
+
+    ai_source = {
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "net_savings": current_balance,
+        "savings_rate": round((current_balance / total_income) * 100) if total_income > 0 else 0,
+        "top_spending_category": categories[0]["name"] if categories else "N/A",
+        "transaction_count": len(transactions),
+        "category_breakdown": {k: round(v, 2) for k, v in category_breakdown.items()},
+    }
+    ai = generate_dashboard_ai_summary(ai_source, recurring_raw, unusual_tx, transactions)
+
+    tx_list = [
+        {
+            "date": tx.get("date"),
+            "name": tx.get("merchant", "Unknown"),
+            "bank": tx.get("bank", "Statement"),
+            "cat": tx.get("category", "Other"),
+            "catColor": "#0ea5e9",
+            "icon": "💳",
+            "iconBg": "#1e3a5f",
+            "amount": float(tx.get("amount") or 0.0),
+            "status": "flagged" if tx in unusual_tx else "completed",
+        }
+        for tx in transactions[:20]
+    ]
+
+    return {
+        "healthScore": ai.get("health_score", 0),
+        "totalIncome": total_income,
+        "totalExpense": total_expense,
+        "currentBalance": current_balance,
+        "savings": current_balance,
+        "incomeChangePct": 0,
+        "expenseChangePct": 0,
+        "savingsPct": round((current_balance / total_income) * 100) if total_income > 0 else 0,
+        "transactionCount": len(transactions),
+        "monthlyData": monthly_data,
+        "categories": categories,
+        "recurring": recurring,
+        "unusual": unusual,
+        "aiInsights": [
+            {"icon": "🧠", "title": "Overview", "text": ai.get("overview", "")},
+            *[{"icon": "📌", "title": "Observation", "text": obs} for obs in ai.get("observations", [])],
+            *[{"icon": "💡", "title": "Recommendation", "text": rec} for rec in ai.get("recommendations", [])],
+        ],
+        "txList": tx_list,
+    }
 
 
 

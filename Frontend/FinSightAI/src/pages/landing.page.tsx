@@ -667,8 +667,8 @@ function DashMock() {
             ))}
           </div>
           <div style={{ display:'flex', marginTop:5 }}>
-            {months.map(m=>(
-              <div key={m} style={{ flex:1, textAlign:'center', fontFamily:'var(--ff-mono)', fontSize:8, color:'var(--paper-faint)' }}>{m}</div>
+            {months.map((m, i) => (
+              <div key={`${m}-${i}`} style={{ flex:1, textAlign:'center', fontFamily:'var(--ff-mono)', fontSize:8, color:'var(--paper-faint)' }}>{m}</div>
             ))}
           </div>
         </div>
