@@ -20,12 +20,21 @@ export interface DashboardSummaryResponse {
     status: "active" | "due" | "missed";
     icon: string;
     color: string;
+<<<<<<< HEAD
     category: string;
     count: number;
     avg_amount: number;
     cadence_months: number;
     next_due_date: string | null;
     unusual: boolean;
+=======
+    category?: string;
+    count?: number;
+    avg_amount?: number;
+    cadence_months?: number;
+    next_due_date?: string | null;
+    unusual?: boolean;
+>>>>>>> 603ff88830926ab77ed1169523f4f7189e3d048a
   }>;
   unusual: Array<{ name: string; reason: string; amount: number; icon: string }>;
   aiInsights: Array<{ icon: string; title: string; text: string }>;
@@ -44,6 +53,7 @@ export interface DashboardSummaryResponse {
 
 async function requestJson<T>(path: string, token: string): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,

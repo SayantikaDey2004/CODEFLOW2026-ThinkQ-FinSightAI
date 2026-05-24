@@ -58,6 +58,7 @@ async function requestBackend<T>(path: string, init: RequestInit = {}): Promise<
   for (const token of tokenList) {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
+      cache: "no-store",
       headers: {
         ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -111,6 +112,7 @@ export async function uploadStatementFiles(files: File[]): Promise<BackendStatem
   for (const token of tokenList) {
     const res = await fetch(`${API_BASE_URL}/statements/upload`, {
       method: "POST",
+      cache: "no-store",
       body: formData,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
