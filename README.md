@@ -31,10 +31,10 @@ Most people have no idea where their money goes. Bank statements are dense, unre
 
 <div align="center">
 
-### 🏠 Landing Page
+### 📊 Financial Dashboard
 ![Landing Page](assets/landing.jpeg)
 
-### 📊 Financial Dashboard
+### Landing Page
 ![Dashboard](assets/dashboard.jpeg)
 
 ### 📄 Statement Upload
