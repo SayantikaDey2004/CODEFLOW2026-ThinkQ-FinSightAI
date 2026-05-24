@@ -9,15 +9,14 @@ import {
   getStoredUser,
   logout as logoutRequest,
   type AuthUser,
-  type StatementAnalysisResponse,
 } from "../services/authApi";
 import { getDashboardSummary, type DashboardSummaryResponse } from "../services/dashboardApi";
 
 const SIDEBAR_LINKS = [
   { label: "Dashboard", icon: "🏠", kind: "scroll", target: "dashboard-top" },
   { label: "Transactions", icon: "💳", kind: "route", target: "/transactions" },
-  { label: "Recurring Payments", icon: "🔁", kind: "scroll", target: "recurring-payments" },
-  { label: "Unusual Spending", icon: "⚠️", kind: "scroll", target: "unusual-spending" },
+  { label: "Recurring Payments", icon: "🔁", kind: "route", target: "/recurring-payments" },
+  { label: "Unusual Spending", icon: "⚠️", kind: "route", target: "/unusual-spending" },
   { label: "AI Insights", icon: "🤖", kind: "route", target: "/ai-summary" },
   { label: "Upload Statement", icon: "📂", kind: "route", target: "/upload" },
 ] as const;
@@ -139,10 +138,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState<AuthUser | null>(getStoredUser());
   const [summary, setSummary] = useState<DashboardSummaryResponse>(EMPTY_SUMMARY);
-  const [analysis, setAnalysis] = useState<StatementAnalysisResponse | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,22 +181,6 @@ export default function DashboardPage() {
       active = false;
     };
   }, [navigate]);
-
-  async function handleUpload() {
-    if (!selectedFile) {
-      setError("Choose a statement file first.");
-      return;
-    }
-
-    setUploading(true);
-    setError(null);
-    try {
-      setError("Statement uploads are not wired in this backend build yet.");
-      setAnalysis(null);
-    } finally {
-      setUploading(false);
-    }
-  }
 
   async function handleLogout() {
     setLogoutBusy(true);
@@ -271,7 +251,7 @@ export default function DashboardPage() {
                 placeItems: "center",
               }}
             >
-              ⋮
+              ☰
             </button>
             <div>
               <div style={{ fontSize: 12, letterSpacing: "0.24em", textTransform: "uppercase", color: "#7dd3fc", fontWeight: 700 }}>FinSightAI</div>
@@ -464,29 +444,6 @@ export default function DashboardPage() {
                 <div style={{ marginTop: 8, fontSize: 20, fontWeight: 800 }}>{topSummary.categories.length > 0 ? topSummary.categories[0].name : "—"}</div>
                 <div style={{ marginTop: 6, color: "#94a3b8", fontSize: 13 }}>{topSummary.categories.length > 0 ? money(topSummary.categories[0].amount) : "No data"}</div>
               </div>
-              <button
-                type="button"
-                onClick={handleUpload}
-                disabled={uploading}
-                style={{
-                  padding: "12px 14px",
-                  borderRadius: 14,
-                  border: "1px solid rgba(148,163,184,0.14)",
-                  background: "rgba(15,23,42,0.85)",
-                  color: "#e2e8f0",
-                  fontWeight: 700,
-                  cursor: uploading ? "not-allowed" : "pointer",
-                }}
-              >
-                {uploading ? "Uploading…" : "Upload statement"}
-              </button>
-              <input
-                type="file"
-                accept=".pdf,.csv,.xlsx,.xls"
-                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-                style={{ width: "100%", color: "#94a3b8" }}
-              />
-              {selectedFile && <div style={{ fontSize: 13, color: "#94a3b8" }}>Selected: {selectedFile.name}</div>}
             </div>
           </Section>
         </div>
@@ -516,60 +473,6 @@ export default function DashboardPage() {
               </div>
             </div>
           </Section>
-
-          <div id="recurring-payments">
-            <Section title="Recurring payments" subtitle="Subscriptions and scheduled bills">
-            <div style={{ display: "grid", gap: 10 }}>
-              {topSummary.recurring.length > 0 ? topSummary.recurring.map((item) => (
-                <div key={item.name} style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", padding: 12, borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(148,163,184,0.1)" }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>{item.name}</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{item.date}</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontWeight: 800, color: "#fca5a5" }}>-{money(item.amount)}</div>
-                    <div style={{ marginTop: 6 }}><Badge color={item.status === "active" ? "#22c55e" : item.status === "due" ? "#f59e0b" : "#ef4444"}>{item.status}</Badge></div>
-                  </div>
-                </div>
-              )) : <div style={{ color: "#94a3b8" }}>No recurring payments detected yet.</div>}
-            </div>
-            </Section>
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-          <Section title="Unusual transactions" subtitle="Flagged by the backend AI layer" action={<div id="unusual-spending"><Badge color="#ef4444">Attention</Badge></div>}>
-            <div style={{ display: "grid", gap: 10 }}>
-              {topSummary.unusual.length > 0 ? topSummary.unusual.map((item) => (
-                <div key={item.name} style={{ padding: 12, borderRadius: 14, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-                    <div>
-                      <div style={{ fontWeight: 700, color: "#f8fafc" }}>{item.name}</div>
-                      <div style={{ marginTop: 4, color: "#fca5a5", fontSize: 13 }}>{item.reason}</div>
-                    </div>
-                    <div style={{ fontWeight: 800, color: "#fca5a5" }}>-{money(item.amount)}</div>
-                  </div>
-                </div>
-              )) : <div style={{ color: "#94a3b8" }}>No anomalies detected yet.</div>}
-            </div>
-          </Section>
-
-          <div id="ai-insights">
-            <Section title="AI financial summary" subtitle="Open the full analysis on a dedicated page" action={<button type="button" onClick={() => navigate("/ai-summary")} style={{ padding: "10px 14px", borderRadius: 14, border: "1px solid rgba(148,163,184,0.14)", background: "rgba(15,23,42,0.85)", color: "#e2e8f0", fontWeight: 700, cursor: "pointer" }}>Open page</button>}>
-            <div style={{ display: "grid", gap: 12 }}>
-              <div style={{ padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(148,163,184,0.1)" }}>
-                <div style={{ fontSize: 20 }}>🧠</div>
-                <div style={{ marginTop: 8, color: "#e2e8f0", lineHeight: 1.6 }}>
-                  The full AI financial summary now lives on its own page so you can review insights, recommendations, and statement analysis without crowding the dashboard.
-                </div>
-                <button type="button" onClick={() => navigate("/ai-summary")} style={{ marginTop: 12, padding: "10px 14px", borderRadius: 14, border: "1px solid rgba(14,165,233,0.2)", background: "rgba(14,165,233,0.12)", color: "#7dd3fc", fontWeight: 700, cursor: "pointer" }}>
-                  View AI summary
-                </button>
-              </div>
-            </div>
-            </Section>
-          </div>
-        </div>
 
         <Section title="Transaction history" subtitle="Latest transactions returned by the backend" action={<div id="transactions"><Badge color="#0ea5e9">Transactions</Badge></div>}>
           <div style={{ overflowX: "auto" }}>
@@ -603,12 +506,8 @@ export default function DashboardPage() {
           </div>
         </Section>
 
-        {analysis && (
-          <div style={{ marginTop: 16, padding: 16, borderRadius: 16, border: "1px solid rgba(34,197,94,0.18)", background: "rgba(34,197,94,0.06)", color: "#dcfce7" }}>
-            Statement upload response received: {analysis.summary?.top_spending_category || "analysis loaded"}
-          </div>
-        )}
         </div>
+      </div>
       </main>
     </div>
   );

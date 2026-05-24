@@ -7,6 +7,8 @@ import ResetPasswordPage from "../pages/resetPassword.page";
 import LoginPage from "../pages/logIn.page";
 import DashboardPage from "../pages/dashboard.page.tsx";
 import AiSummaryPage from "../pages/aiSummary.page";
+import UnusualSpendingPage from "../pages/unusualSpending.page";
+import RecurringPaymentsPage from "../pages/recurringPayments.page";
 import LandingPage from "../pages/landing.page";
 import UserProfile from "../pages/profile.page";
 import UploadPage from "../pages/dataUpload.page";
@@ -23,6 +25,8 @@ const Router: React.FC = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/ai-summary" element={<AiSummaryPage />} />
+        <Route path="/unusual-spending" element={<UnusualSpendingPage />} />
+        <Route path="/recurring-payments" element={<RecurringPaymentsPage />} />
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/landing" element={<LandingPage />} />
