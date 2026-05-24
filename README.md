@@ -1,3 +1,4 @@
+
 <div align="center">
 
 # 🏦 FinSight AI
@@ -10,6 +11,7 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb)](https://mongodb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-4285F4?style=for-the-badge&logo=google)](https://aistudio.google.com)
+[![XGBoost](https://img.shields.io/badge/XGBoost-Anomaly%20Detection-FF6600?style=for-the-badge)](https://xgboost.readthedocs.io)
 
 > Upload your bank statement. Get AI-powered financial insights in seconds.
 
@@ -54,7 +56,7 @@ Most people have no idea where their money goes. Bank statements are dense, unre
 | 🏷️ **Auto-Categorisation** | 30+ keyword rules map transactions to categories — Food, Transport, Rent, UPI Transfers, Subscriptions, EMIs, and more |
 | 📊 **Financial Dashboard** | Summary cards, income vs expense charts, category breakdown, health score |
 | 🔄 **Recurring Detection** | Identifies merchants that appear multiple times (subscriptions, EMIs, rent) |
-| ⚠️ **Anomaly Flagging** | Statistical outlier detection flags unusual high-value debits automatically |
+| ⚠️ **Anomaly Flagging** | XGBoost ML model detects unusual transactions — more robust than simple statistical thresholds |
 | 🤖 **AI Summary** | Rule-based financial health report with observations and personalised recommendations |
 | 🔐 **Auth System** | JWT-based signup, login, logout with bcrypt password hashing |
 | 👤 **User Profiles** | Per-user statement storage in MongoDB — your data stays yours |
@@ -82,14 +84,15 @@ Most people have no idea where their money goes. Bank statements are dense, unre
 │   MongoDB users              │                endpoint       │
 │                    ┌─────────▼──────────┐                   │
 │                    │   Gemini 2.5 Flash  │                   │
-│                    │   (OCR + Parsing)   │                   │
+│                    │ (OCR, Categorise,   │                   │
+│                    │  Summarise, etc.)   │                   │
 │                    └─────────┬──────────┘                   │
 │                              │                              │
 │                    ┌─────────▼──────────┐                   │
 │                    │  Analysis Pipeline  │                   │
 │                    │  • Normalisation    │                   │
 │                    │  • Categorisation   │                   │
-│                    │  • Anomaly detect   │                   │
+│                    │  • XGBoost anomaly  │                   │
 │                    │  • Monthly trends   │                   │
 │                    │  • AI summary       │                   │
 │                    └─────────┬──────────┘                   │
@@ -111,7 +114,8 @@ Most people have no idea where their money goes. Bank statements are dense, unre
 |---|---|
 | **FastAPI** | REST API framework with auto Swagger docs |
 | **Python 3.12** | Core language |
-| **Google Gemini 2.5 Flash** | PDF OCR and transaction extraction |
+| **Google Gemini 2.5 Flash** | PDF OCR, transaction extraction, categorisation, summarisation & AI insights |
+| **XGBoost** | Pre-trained ML model for anomaly / unusual transaction detection |
 | **MongoDB Atlas + PyMongo** | User data and statement storage |
 | **bcrypt** | Password hashing |
 | **PyJWT** | JWT token auth |
@@ -249,9 +253,9 @@ Categorisation Engine
     │  Falls back to "Other" for unknown merchants
     ▼
 Anomaly Detection
-    │  Computes median debit amount
-    │  Flags transactions > 3× median or > 50% of max debit
-    │  Minimum threshold: ₹5,000
+    │  Pre-trained XGBoost model identifies unusual transactions
+    │  Trained on financial transaction patterns to flag outliers
+    │  More robust than simple statistical threshold rules
     ▼
 Recurring Payment Detection
     │  Groups transactions by merchant + category
